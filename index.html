@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible"><!-- TODO: dynamic title -->
+    <title>pyLoad WebUI</title>
+    <meta content="pyLoad WebUI" name="description">
+    <meta content="width=device-width" name="viewport"><!-- TODO: basepath and templates -->
+    <link href="styles/6e754faa.font.css" rel="stylesheet" type="text/css">
+    <link href="styles/default/6c93bd47.main.css" rel="stylesheet" type="text/css">
+    <link href="vendor/select2.css" rel="stylesheet" type="text/css">
+    <script data-main="scripts/config" src="components/requirejs/require.js">
+    </script>
+    <script type="text/javascript">
+
+        // Use value set by templateEngine or default val
+        function configValue(string, defaultValue) {
+            if (string.indexOf('{'+'{') > -1 && string !== 'None' && string !== '')
+                return defaultValue;
+            return string;
+        }
+
+        window.dates = {
+            weeks: ['week', 'weeks'],
+            days: ['day', 'days'],
+            hours: ['hour', 'hours'],
+            minutes: ['minute', 'minutes'],
+            seconds: ['second', 'seconds']
+        }; // TODO carefully when translating
+
+        window.hostProtocol = window.location.protocol +  '//';
+        window.hostAddress = window.location.hostname;
+        window.hostPort = configValue('{{web}}', '8001');
+        window.external = configValue('{{external}}', 'true').toLowerCase();
+        window.pathPrefix = configValue('{{prefix}}', '');
+        window.wsAddress = configValue('{{ws}}', 'ws://%s:7447');
+        window.setup = configValue('{{setup}}', 'false').toLowerCase();
+
+        require(['config'], function(Config) {
+            require(['default'], function(App) {
+            });
+        })
+    </script>
+</head>
+<body>
+    <div id="wrap">
+        <header>
+            <div class="container-fluid">
+                <div class="row-fluid" id="header">
+                    <div>
+                        <div class="span3">
+                            <div class="logo"></div><span class="title visible-large-screen">pyLoad</span><p>0.5</p>
+                        </div>
+                        <div class="span4 offset1">
+                          <div id="progress-area">
+                                <span id="progress-info"></span>
+                                <div class="sup"><span id="progress-info2">You're running this website! <em class="icon-list pull-right"></em></span></div>
+                                <div class="progress" id="globalprogress">
+                                    <span id="progress-info"></span>
+                                    <div class="bar" style="width: 33%">
+                                        <span id="progress-info"></span>
+                                    </div>
+                                </div>
+                                <div class="sub">
+                                    <span class="pull-left"> 1 download(s) left. (100MByte)</span>
+                                </div>
+                                <div class="sub"><span class="pull-right">a few secounds left</span></div>
+                                <div class="popover bottom" style="display: none;">
+                                    <div class="arrow"></div>
+                                    <div class="popover-inner">
+                                        <h3 class="popover-title"><!-- TODO: the first i18n underscore is not registered as helper -->
+                                         Running... <button aria-hidden="true" class="close" type="button">×</button></h3>
+                                        <div class="popover-content">
+                                            <ul class="progress-list"></ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="span4">
+                            <div class="header-block">
+                                <i class="icon-download-alt icon-white"></i> Max. Speed:<br>
+                                <i class="icon-off icon-white"></i> Running:<br>
+                                <i class="icon-refresh icon-white"></i> Reconnect:<br>
+                            </div>
+                            <div class="header-block status-block">
+                                <span class="pull-right maxspeed">1 GBit/s</span><br>
+                                <span class="pull-right running">true</span><br>
+                                <span class="pull-right reconnect">false</span>
+                            </div>
+                            <div class="header-btn">
+                                <div class="btn-group">
+                                    <a class="btn btn-blue btn-small"><i class="icon-user"></i> Pyload</a> <a class="btn btn-blue btn-small dropdown-toggle" data-toggle=
+                                    "dropdown"><span class="caret"></span></a>
+                                    <ul class="dropdown-menu" style="right: 0; left: -100%">
+                                        <li>
+                                            <a data-nav="" href="file:///"><i class="icon-list-alt"></i> Dashboard</a>
+                                        </li>
+                                        <li>
+                                            <a data-nav="" href="file:///settings"><i class="icon-wrench"></i> Settings</a>
+                                        </li>
+                                        <li>
+                                            <a data-nav="" href="file:///accounts"><i class="icon-key"></i> Accounts</a>
+                                        </li>
+                                        <li>
+                                            <a data-nav="" href="file:///admin"><i class="icon-cogs"></i> Admin</a>
+                                        </li>
+                                        <li class="divider"></li>
+                                        <li>
+                                            <a data-nav="" href="file:///logout"><i class="icon-signout"></i> Logout</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="btn-group lower">
+                                    <button class="btn btn-success btn-grabber btn-mini"><i class="icon-plus icon-white"></i></button> <button class="btn btn-blue btn-play btn-mini"><i class=
+                                    "icon-play icon-white"></i></button> <button class="btn btn-danger btn-delete btn-mini"><i class="icon-remove icon-white"></i></button>
+                                </div>
+                            </div><span class="visible-desktop speedgraph-container"></span>
+                            <div id="speedgraph" style="padding: 0px; position: relative;">
+                                <span class="visible-desktop speedgraph-container"></span>
+                                <canvas class="flot-overlay" height="108" style="direction: ltr; position: absolute; left: px; top: 0px; width: 256px; height: 54px;" width="512">
+                                    <span class="visible-desktop speedgraph-container"></span>
+                                </canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="notification-area"></div>
+            <div id="selection-area" style="height: 0px;"></div>
+        </header>
+        <div class="container-fluid" id="content-container">
+            <div class="row-fluid" id="actionbar">
+                <div>
+                    <div class="span2 offset1"></div>
+                    <ul class="actionbar nav nav-pills span9">
+                        <li class="li-check">
+                            <a><i class="icon-check"></i></a>
+                        </li>
+                        <li>
+                            <ul class="breadcrumb">
+                                <li>
+                                    <a>Online</a> <span class="divider">/var/www/pyload/dev/0.0.1/</span>
+                                </li>
+                                <li class="active"></li>
+                            </ul>
+                        </li>
+                        <li style="float: right;">
+                            <form class="form-search">
+                                <div class="input-append">
+                                    <input class="search-query" style="width: 120px" type="text" value ="" placeholder="I do not work!"> <button class="btn" type="submit" ><div class="icon-search"></div></button>
+                                </div>
+                            </form>
+                        </li>
+                        <li class="dropdown" style="float: right;">
+                            <a class="dropdown-toggle type" data-toggle="dropdown">Type <b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="filter-type" data-type="2" href="#"><i class="icon-ok"></i>&nbsp;Audio</a>
+                                </li>
+                                <li>
+                                    <a class="filter-type" data-type="4" href="#"><i class="icon-ok"></i>&nbsp;Image</a>
+                                </li>
+                                <li>
+                                    <a class="filter-type" data-type="8" href="#"><i class="icon-ok"></i>&nbsp;Video</a>
+                                </li>
+                                <li>
+                                    <a class="filter-type" data-type="16" href="#"><i class="icon-ok"></i>&nbsp;Document</a>
+                                </li>
+                                <li>
+                                    <a class="filter-type" data-type="32" href="#"><i class="icon-ok"></i>&nbsp;Archive</a>
+                                </li>
+                                <li>
+                                    <a class="filter-type" data-type="64" href="#"><i class="icon-ok"></i>&nbsp;Executable</a>
+                                </li>
+                                <li>
+                                    <a class="filter-type" data-type="1" href="#"><i class="icon-ok"></i>&nbsp;Other</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="dropdown" style="float: right;">
+                            <a class="dropdown-toggle" data-toggle="dropdown" onMouseOver="dropdown"><span class="state">All</span> <b class="caret"></b></a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="filter-state" data-state="0" href="#">All</a>
+                                </li>
+                                <li>
+                                    <a class="filter-state" data-state="1" href="#">Finished</a>
+                                </li>
+                                <li>
+                                    <a class="filter-state" data-state="2" href="#">Unfinished</a>
+                                </li>
+                                <li>
+                                    <a class="filter-state" data-state="3" href="#">Failed</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row-fluid" id="content">
+                <div>
+                    <div class="span3">
+                        <div class="sidebar-header"><em class="icon-hdd"></em> Menu:
+<div class="pull-right" style="font-size: medium; line-height: normal">
+                    <i class="icon-chevron-down" style="font-size: 20px"></i>
+                </div>
+                            <div class="clearfix"></div>
+                        </div>
+                        <ul class="package-list">
+                            <li class="package-view">
+                                <i class="icon-home"></i> <span class="active">Home</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 95%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="package-view">
+                                <i class="icon-info-sign"></i> <span class="package-name">Wiki</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="package-view">
+                                <i class="icon-download-alt"></i> <span class="package-name">Download</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            <li class="package-view">
+                                <i class="icon-gears"></i> <span class="package-name">Installation</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            
+                        </ul><br>
+                        <br>
+                        <div class="sidebar-header">
+                            <i class="icon-group"></i> Shared
+                            <div class="pull-right" style="font-size: medium; line-height: normal">
+                                <i class="icon-chevron-down" style="font-size: 20px"></i>
+                            </div>
+                        </div>
+                        
+                        <ul class="package-list">
+                        <li class="package-view">
+                                <i class="icon-github-alt"></i> <span class="package-name">GitHub</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            
+                            <li class="package-view">
+                                <i class="icon-youtube-play"></i> <span class="package-name">YouTube</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="package-view">
+                                <i class="icon-twitter"></i> <span class="package-name">Twitter</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="package-view">
+                                <i class="icon-comments-alt"></i> <span class="package-name">Forums</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="package-view">
+                                <i class="icon-book"></i> <span class="package-name">Documentation</span>
+                                <div class="package-frame" onclick="location.href='index.html';">
+                                    <div class="tag-area">
+                                        <!--<span class="badge badge-success"><i class="icon-tag"></i>video</span>-->
+                                        <!--<span class="badge badge-success badge-ghost"><i class="icon-tag"></i> Add Tag</span>-->
+                                    </div>
+                                    <div class="progress">
+                                        
+                                        <div class="bar bar-info" style="width: 0%"></div><span style="position: absolute; right: 5px">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li>...</li>
+                        </ul>
+                        <div class="sidebar-header">
+                            <i class="icon-sitemap"></i> Remote
+                        </div>
+                        <ul>
+                            <li>Content from</li>
+                            <li>remote sites or</li>
+                            <li>other pyload instances</li>
+                        </ul>
+                    </div>
+                    <div class="span9">
+                        <ul class="file-list">
+                            <!--- CONTENT==-->
+                            
+                           
+                            <li style="list-style: none; display: inline">
+                                <p></p>
+                                <p><img alt="" class="mediacenter" src="http://web.archive.org/web/20151211134050im_/http://pyload.org/_media/pyload_logo.png"></p>
+                                <h3><a id="introduction" name="introduction"></a>Introduction</h3>
+                                <div class="level3">
+                                    <p>pyLoad is a fast, lightweight and full featured download manager for many One-Click-Hoster, container formats like DLC, video sites or just plain http/ftp
+                                    links. It aims for low hardware requirements and platform independence to be runnable on all kind of systems (desktop pc, netbook, NAS, router).<br>
+                                    Despite its strict restriction it is packed full of features just like webinterface, captcha recognition, unrar and much more.&nbsp;</p>
+                                    <p>pyLoad is divided into core and clients, to make it easily remote accessible. Currently there are a webinterface, command line interface, a&nbsp;<acronym title=
+                                    "Graphical User Interface">GUI</acronym>&nbsp;written in Qt and an Android client. Screenshots can be found&nbsp;<a class="wikilink1" href=
+                                    "http://web.archive.org/web/20151211134050/http://pyload.org/screenshots" title="screenshots">here</a>.</p>
+                                    
+                                     <div class="well well-transparent">
+        <div style="font-size: 14px; line-height: 1.5em; border-radius: 10px;">
+        <i class="icon-info-sign icon-3x pull-left icon-border"></i>
+        <p>i like all the icons ...</p>
+        <p>Take a look at <a href="http://fortawesome.github.io/Font-Awesome/3.2.1/examples/#new-styles">this link</a></p>
+        </div></div>
+                                    <p><img align="right" alt="" class="mediaright" src="http://web.archive.org/web/20151211134050im_/http://pyload.org/_media/gui.png"></p>
+                                </div>
+                                <h3><a id="advantages" name="advantages"></a>Advantages</h3>
+                                <div class="level3">
+                                    <p>Some main advantages at a glance:</p>
+                                    <ul>
+                                        <li class="level1">
+                                            <div class="li">
+                                                completely written in python
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                low hardware requirements
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                features many One-Click-Hoster
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                including premium support, captcha recognition, reconnect feature
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                DLC, CCF, RSDF support
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                easily remote accessible via webinterface or&nbsp;<acronym title="Graphical User Interface">GUI</acronym>
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                free support at&nbsp;<a class="wikilink1" href="http://web.archive.org/web/20151211134050/http://pyload.org/irc" title=
+                                                "irc">irc</a>&nbsp;or&nbsp;<a class="urlextern" href="http://web.archive.org/web/20151211134050/http://forum.pyload.org/" rel="nofollow" target=
+                                                "_blank" title="http://forum.pyload.org">forum</a>
+                                            </div>
+                                        </li>
+                                        <li class="level1">
+                                            <div class="li">
+                                                released under&nbsp;<acronym title="GNU General Public License">GPL</acronym>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                    <p>Below you find an excerpt of pyLoads plugins and features. For more information and some tutorials take a look into the&nbsp;<a class="wikilink1" href=
+                                    "http://web.archive.org/web/20151211134050/http://pyload.org/wiki" title="wiki">pyLoad Community Wiki</a>.</p>
+                                    
+                                    <p>....</p>
+                                    
+                                    
+                                     <!--- CONTENT End==-->
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span2 offset1">
+                    <div class="copyright">
+                        © 2008-2016<br>
+                        <a href="http://pyload.org/" target="_blank">The pyLoad Team</a><br>
+                    </div>
+                </div>
+                <div class="span2 block">
+                    <h2 class="block-title"><a href="http://pyload.org/" target="_blank">Community &nbsp;<i class="icon-comment"></i></a></h2>
+                    <hr>
+                    <a href="http://pyload.org/" target="_blank">Homepage</a>&nbsp;· <a href="http://board.pyload.org/" target="_blank">Board</a>&nbsp;· <a href="http://pyload.org/chat" target=
+                    "_blank">Chat</a>
+                </div>
+                <div class="span2 block">
+                    <h2 class="block-title"><a href="https://twitter.com/pyload" target="_blank">Follow us &nbsp;<i class="icon-twitter"></i></a></h2>
+                    <hr>
+                    <a href="https://twitter.com/pyload" target="_blank">Twitter</a>&nbsp;· <a href="http://www.youtube.com/user/pyloadTeam" target="_blank">Youtube</a>
+                </div>
+                <div class="span2 block">
+                    <h2 class="block-title"><a href="https://github.com/pyload" target="_blank">Development &nbsp;<i class="icon-github"></i></a></h2>
+                    <hr>
+                    <a href="https://github.com/pyload/pyload" target="_blank">Github</a>&nbsp;· <a href="http://docs.pyload.org/" target="_blank">Documentation</a>
+                </div>
+                
+                <div class="span2 block">
+                    <h2 class="block-title"><a href="http://pyload.org/donate" target="_blank">Donate &nbsp;<i class="icon-bitcoin">&nbsp;</i></a></h2>
+                    <hr>
+                    <a href="http://pyload.org/donate" target="_blank">PayPal</a>&nbsp;· <a href="http://blockchain.info/address/1JvcfSKuzk3VENJm9XtqGp2DCTesgokkG2" target="_blank">Bitcoin</a>&nbsp;·
+                    <a href="https://flattr.com/profile/pyload" target="_blank">Flattr</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <div class="hide" id="modal-overlay"></div>
+</body>
+</html>
